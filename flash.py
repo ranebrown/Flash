@@ -3,6 +3,7 @@ import argparse
 import glob
 import os
 import random
+import sys
 from pathlib import Path
 
 from blessings import Terminal
@@ -43,17 +44,20 @@ getch = _find_getch()
 
 
 class Flash:
-    def __init__(self, deck, xeric):
+    def __init__(self, deck, xeric, priority):
         """
         Initializes the Flash class
 
         :param deck string: the user selected deck
         :param xeric boolean: true if priority 0 cards should be hidden
+        :param priority int: only display cards of this priority level
         """
         # TODO allow absolute or relative path to a deck in addition to ones in
         # default location
 
         self.xeric = xeric
+
+        self.priority = priority
 
         # construct the full path to flash decks
         deckpath = os.getenv('XDG_DATA_HOME')
@@ -69,14 +73,14 @@ class Flash:
             except OSError:
                 print("Creation of the directory {} failed".format(
                     self.deckpath))
-                exit(1)
+                sys.exit(1)
 
         # get list of all available decks
         self.decklist = glob.glob(self.deckpath + '/*.yaml')
         if not self.decklist:
             # TODO create a sample deck?
             print("Warning: no decks found in {}".format(self.deckpath))
-            exit(1)
+            sys.exit(1)
 
         # convert deck to a absolute path
         if deck:
@@ -107,7 +111,7 @@ class Flash:
     def Flash(self):
         if not self.VerifyDeck():
             print("Invalid deck selected. Use -l to list available decks.")
-            exit(1)
+            sys.exit(1)
 
         # process the deck
         yaml = YAML()
@@ -128,19 +132,37 @@ class Flash:
             elif elm['priority'] == 3:
                 cardsp3.append(elm)
             else:
-                elm['priority'] = 0
-                cardsp0.append(elm)
+                elm['priority'] = 3
+                cardsp3.append(elm)
 
-        if not self.xeric:
-            # all cards
-            cardlist = [cardsp3, cardsp2, cardsp1, cardsp0]
+        if self.priority == -1:
+            if not self.xeric:
+                # all cards
+                cardlist = [cardsp3, cardsp2, cardsp1, cardsp0]
+            else:
+                # exclude priority 0 cards
+                cardlist = [cardsp3, cardsp2, cardsp1]
         else:
-            # exclude priority 0 cards
-            cardlist = [cardsp3, cardsp2, cardsp1]
+            # only show cards of the selected priority
+            if self.priority == 1:
+                cardlist = [cardsp0]
+            elif self.priority == 2:
+                cardlist = [cardsp1]
+            elif self.priority == 3:
+                cardlist = [cardsp2]
+            elif self.priority == 4:
+                cardlist = [cardsp3]
+            else:
+                print("Invalid priority ({}) selected.".format(self.priority))
+                sys.exit(1)
+
+        if all([not elem for elem in cardlist]):
+            print("No cards available of selected priority {}.".format(
+                self.priority))
+            sys.exit(1)
 
         t = Terminal()
 
-        # TODO add option to only show cards of a selected priority
         for prio in cardlist:
             random.shuffle(prio)
             for card in prio:
@@ -150,7 +172,7 @@ class Flash:
                     "                          Flash Cards for the Terminal                          "
                 ))
                 print(t.bold("Category: ") + card['subject'])
-                print(t.bold("Priority: ") + str(card['priority']))
+                print(t.bold("Priority: ") + str(card['priority'] + 1))
                 print()
                 print(t.bold_yellow("Question:"))
                 print(card['question'])
@@ -211,6 +233,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Flash cards for the terminal.")
     parser.add_argument('-d', '--deck', help="The deck to use")
+    parser.add_argument(
+        '-p',
+        '--priority',
+        type=int,
+        default=-1,
+        help="Only show cards of the given priority. Valid values are 1,2,3,4")
     parser.add_argument('-x',
                         '--xeric',
                         action='store_true',
@@ -222,12 +250,12 @@ if __name__ == "__main__":
                         help="List the available decks")
     args = parser.parse_args()
 
-    f = Flash(args.deck, args.xeric)
+    f = Flash(args.deck, args.xeric, args.priority)
 
     # list avialable flash decks
     if args.list:
         f.List()
-        exit(0)
+        sys.exit(0)
 
     # verify user selected deck exists
     if not args.deck:
