@@ -86,6 +86,7 @@ class Flash:
         if deck:
             self.deck = self.deckpath + '/' + os.path.splitext(
                 deck)[0] + '.yaml'
+            self.deckname = os.path.splitext(deck)[0]
 
     def List(self):
         """
@@ -116,6 +117,7 @@ class Flash:
         # process the deck
         yaml = YAML()
         cards = yaml.load(Path(self.deck))
+        decksize = len(cards)
 
         # sort into groups based on priority
         cardsp0 = []
@@ -171,8 +173,10 @@ class Flash:
                 print(t.bold_reverse(
                     "                          Flash Cards for the Terminal                          "
                 ))
-                print(t.bold("Category: ") + card['subject'])
-                print(t.bold("Priority: ") + str(card['priority'] + 1))
+                print(t.bold("Deck name: ") + self.deckname)
+                print(t.bold("Cards in deck: ") + str(decksize))
+                print(t.bold("Question category: ") + card['subject'])
+                print(t.bold("Question priority: ") + str(card['priority'] + 1))
                 print()
                 print(t.bold_yellow("Question:"))
                 print(card['question'])
@@ -213,9 +217,17 @@ class Flash:
                 continue
             break
 
+        # make sure all cards get written back to the file
         if self.xeric:
-            # add the 0 priority cards back in
             cardlist.append(cardsp0)
+        if self.priority == 1:
+            cardlist.extend((cardsp1, cardsp2, cardsp3))
+        elif self.priority == 2:
+            cardlist.extend((cardsp0, cardsp2, cardsp3))
+        elif self.priority == 3:
+            cardlist.extend((cardsp0, cardsp1, cardsp3))
+        elif self.priority == 4:
+            cardlist.extend((cardsp0, cardsp1, cardsp2))
 
         # convert the list of lists back to a single list
         newcards = [item for sublist in cardlist for item in sublist]
