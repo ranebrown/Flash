@@ -272,6 +272,7 @@ if __name__ == "__main__":
     # verify user selected deck exists
     if not args.deck:
         print("Please select a deck. Use -l to list available decks.")
+        sys.exit(1)
 
     # start flash card session
     f.Flash()
