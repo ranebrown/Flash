@@ -52,9 +52,6 @@ class Flash:
         :param xeric boolean: true if priority 0 cards should be hidden
         :param priority int: only display cards of this priority level
         """
-        # TODO allow absolute or relative path to a deck in addition to ones in
-        # default location
-
         self.xeric = xeric
 
         self.priority = priority
@@ -82,11 +79,19 @@ class Flash:
             print("Warning: no decks found in {}".format(self.deckpath))
             sys.exit(1)
 
-        # convert deck to a absolute path
         if deck:
-            self.deck = self.deckpath + '/' + os.path.splitext(
-                deck)[0] + '.yaml'
-            self.deckname = os.path.splitext(deck)[0]
+            # check if abs or relative path passed
+            tmpdeck = os.path.abspath(deck)
+            if os.path.isfile(tmpdeck):
+                self.localFile = True
+                self.deck = tmpdeck
+                self.deckname = os.path.splitext(os.path.basename(self.deck))[0]
+            else:
+                self.localFile = False
+                # assume deck is in standard deck location
+                self.deck = self.deckpath + '/' + os.path.splitext(
+                    deck)[0] + '.yaml'
+                self.deckname = os.path.splitext(deck)[0]
 
     def List(self):
         """
@@ -104,7 +109,7 @@ class Flash:
         Returns true if the deck is valid.
 
         """
-        if self.deck in self.decklist:
+        if self.localFile or self.deck in self.decklist:
             return True
         else:
             return False
