@@ -56,6 +56,9 @@ class Flash:
     Contains the main functionality needed to display flash cards from a yaml deck.
     """
 
+    # q, Q, ctrl-c, ctrl-d, ctrl-z
+    exitChars = ["q", "Q", "\x03", "\x04", "\x1a"]
+
     def __init__(self, deck, xeric, priority):
         """
         Initialize the Flash Class.
@@ -213,6 +216,64 @@ class Flash:
         # write the updates back to the card deck file
         self.yaml.dump(newcards, Path(self.deck))
 
+    def DisplayCardQuestion(self, term, card):
+        """
+        Print the card header and question to terminal.
+
+        Parameters
+        ----------
+        term : Terminal
+            Terminal handle for displaying ANSI escape sequences
+        card : yaml object
+            yaml entry for the current card
+        """
+        print(term.clear())
+        print(
+            term.bold_reverse(
+                "                          Flash Cards for the Terminal                          "  # noqa:E501
+            )
+        )
+        print(term.bold("Deck name: ") + self.deckname)
+        print(term.bold("Cards in deck: ") + str(self.decksize))
+        print(term.bold("Cards remaining in run: ") + str(self.cardCount))
+        print(term.bold("Question category: ") + card["subject"])
+        print(term.bold("Question priority: ") + str(card["priority"] + 1))
+        print()
+        print(term.bold_yellow("Question:"))
+        print(card["question"])
+
+    def DisplayCardAnswer(self, term, card):
+        """
+        Print the card answer to terminal.
+
+        Parameters
+        ----------
+        term : Terminal
+            Terminal handle for displaying ANSI escape sequences
+        card : yaml object
+            yaml entry for the current card
+        """
+        print(term.bold_green("Answer:"))
+        print(card["answer"])
+        print(
+            term.reverse(
+                "================================================================================"  # noqa:E501
+            )
+        )
+        print()
+        print(term.bold("How difficult was the question?"))
+        print()
+        print(
+            term.bold("Xeric ")
+            + "[1]  "
+            + term.green("Easy ")
+            + "[2]  "
+            + term.yellow("Normal ")
+            + "[3]  "
+            + term.red("Difficult ")
+            + "[4]"
+        )
+
     def Flash(self):
         """
         Primary flash function.
@@ -226,58 +287,30 @@ class Flash:
         t = Terminal()
 
         # number of cards shown for this run
-        cardCount = sum([len(c) for c in self.cardlist])
+        self.cardCount = sum([len(c) for c in self.cardlist])
 
         for prio in self.cardlist:
             random.shuffle(prio)
             for card in prio:
                 # TODO shuffle a random hard priority card back in occasionally
-                print(t.clear())
-                print(
-                    t.bold_reverse(
-                        "                          Flash Cards for the Terminal                          "  # noqa:E501
-                    )
-                )
-                print(t.bold("Deck name: ") + self.deckname)
-                print(t.bold("Cards in deck: ") + str(self.decksize))
-                print(t.bold("Cards remaining in run: ") + str(cardCount))
-                print(t.bold("Question category: ") + card["subject"])
-                print(t.bold("Question priority: ") + str(card["priority"] + 1))
-                print()
-                print(t.bold_yellow("Question:"))
-                print(card["question"])
-                cardCount -= 1
+
+                # show the card header and question
+                self.DisplayCardQuestion(t, card)
+
+                # remaining cards for the run
+                self.cardCount -= 1
+
+                # exit if user wants, else display answer on keypress
                 c = getch()
-                if c == "q" or c == "Q":
+                if c in self.exitChars:
                     break
-                elif c == "\x03" or c == "\x04" or c == "\x1a":
-                    # handle ctrl-c, ctrl-d, ctrl-z
-                    break
-                print(t.bold_green("Answer:"))
-                print(card["answer"])
-                print(
-                    t.reverse(
-                        "================================================================================"  # noqa:E501
-                    )
-                )
-                print()
-                print(t.bold("How difficult was the question?"))
-                print()
-                print(
-                    t.bold("Xeric ")
-                    + "[1]  "
-                    + t.green("Easy ")
-                    + "[2]  "
-                    + t.yellow("Normal ")
-                    + "[3]  "
-                    + t.red("Difficult ")
-                    + "[4]"
-                )
+
+                # show the card answer and priority options
+                self.DisplayCardAnswer(t, card)
+
+                # get user input and then store new priority
                 c = getch()
-                if c == "q" or c == "Q":
-                    break
-                elif c == "\x03" or c == "\x04" or c == "\x1a":
-                    # handle ctrl-c, ctrl-d, ctrl-z
+                if c in self.exitChars:
                     break
                 elif c == "1":
                     card["priority"] = 0
@@ -287,6 +320,7 @@ class Flash:
                     card["priority"] = 2
                 elif c == "4":
                     card["priority"] = 3
+
             # see https://stackoverflow.com/a/654002/4162894 for an explanation
             # of how the nested loops are exited
             else:
