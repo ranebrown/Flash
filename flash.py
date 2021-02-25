@@ -225,6 +225,9 @@ class Flash:
 
         t = Terminal()
 
+        # number of cards shown for this run
+        cardCount = sum([len(c) for c in self.cardlist])
+
         for prio in self.cardlist:
             random.shuffle(prio)
             for card in prio:
@@ -237,11 +240,13 @@ class Flash:
                 )
                 print(t.bold("Deck name: ") + self.deckname)
                 print(t.bold("Cards in deck: ") + str(self.decksize))
+                print(t.bold("Cards remaining in run: ") + str(cardCount))
                 print(t.bold("Question category: ") + card["subject"])
                 print(t.bold("Question priority: ") + str(card["priority"] + 1))
                 print()
                 print(t.bold_yellow("Question:"))
                 print(card["question"])
+                cardCount -= 1
                 c = getch()
                 if c == "q" or c == "Q":
                     break
