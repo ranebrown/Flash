@@ -59,7 +59,7 @@ class Flash:
     # q, Q, ctrl-c, ctrl-d, ctrl-z
     exitChars = ["q", "Q", "\x03", "\x04", "\x1a"]
 
-    def __init__(self, deck, xeric, priority):
+    def __init__(self, deck, xeric, priority, frequency):
         """
         Initialize the Flash Class.
 
@@ -75,6 +75,8 @@ class Flash:
         self.xeric = xeric
 
         self.priority = priority
+
+        self.frequency = frequency
 
         # construct the full path to flash decks
         deckpath = os.getenv("XDG_DATA_HOME")
@@ -274,6 +276,28 @@ class Flash:
             + "[4]"
         )
 
+    def UpdatePriority(self, newPri, card):
+        """
+        Update the priority of a card based on user input.
+
+        An invalid priority results in no change to the priority.
+
+        Parameters
+        ----------
+        newPri : char
+            The new priority
+        card : yaml object
+            the card that is currently being updated
+        """
+        if newPri == "1":
+            card["priority"] = 0
+        elif newPri == "2":
+            card["priority"] = 1
+        elif newPri == "3":
+            card["priority"] = 2
+        elif newPri == "4":
+            card["priority"] = 3
+
     def Flash(self):
         """
         Primary flash function.
@@ -281,18 +305,58 @@ class Flash:
         The questions are read in from the yaml deck and sorted into priority groups to
         display. Upon completion the deck is written back to the original file with the
         updated priorities entered by the user.
+
+        If the user doesn't enter a specific priority to show then all high priority
+        cards will be shown twice. Once at the beginning and then periodically as the
+        remainder of the cards are shown.
         """
         self.LoadCards()
 
         t = Terminal()
 
-        # number of cards shown for this run
-        self.cardCount = sum([len(c) for c in self.cardlist])
+        numHighPri = 0
+        if self.priority == -1 and self.frequency != 0:
+            numHighPri = len(self.cardsp3)
 
+        # number of cards shown for this run
+        self.cardCount = sum([len(c) for c in self.cardlist]) + numHighPri
+
+        cardsSeen = 0
         for prio in self.cardlist:
             random.shuffle(prio)
             for card in prio:
-                # TODO shuffle a random hard priority card back in occasionally
+                cardsSeen += 1
+
+                # shuffle a random high priority card back in occasionally
+                if (
+                    self.frequency != 0
+                    and numHighPri > 0
+                    and card["priority"] != 3
+                    and cardsSeen % self.frequency == 0
+                ):
+                    highPriCard = random.choice(self.cardsp3)
+                    numHighPri -= 1
+
+                    # show the card header and question
+                    self.DisplayCardQuestion(t, highPriCard)
+
+                    # remaining cards for the run
+                    self.cardCount -= 1
+
+                    # exit if user wants, else display answer on keypress
+                    c = getch()
+                    if c in self.exitChars:
+                        break
+
+                    # show the card answer and priority options
+                    self.DisplayCardAnswer(t, highPriCard)
+
+                    # get user input and then store new priority
+                    c = getch()
+                    if c in self.exitChars:
+                        break
+                    else:
+                        self.UpdatePriority(c, highPriCard)
 
                 # show the card header and question
                 self.DisplayCardQuestion(t, card)
@@ -312,14 +376,8 @@ class Flash:
                 c = getch()
                 if c in self.exitChars:
                     break
-                elif c == "1":
-                    card["priority"] = 0
-                elif c == "2":
-                    card["priority"] = 1
-                elif c == "3":
-                    card["priority"] = 2
-                elif c == "4":
-                    card["priority"] = 3
+                else:
+                    self.UpdatePriority(c, card)
 
             # see https://stackoverflow.com/a/654002/4162894 for an explanation
             # of how the nested loops are exited
@@ -347,6 +405,17 @@ if __name__ == "__main__":
         help="Only show cards of the given priority. Valid values are 1,2,3,4",
     )
     parser.add_argument(
+        "-f",
+        "--frequency",
+        type=int,
+        default=5,
+        help="""
+            How often to shuffle back in high priority cards. The frequency is
+            determined by the number of cards in run modulo this argument. The default
+            is 5. Set to 0 to disable.
+            """,
+    )
+    parser.add_argument(
         "-x",
         "--xeric",
         action="store_true",
@@ -357,7 +426,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    f = Flash(args.deck, args.xeric, args.priority)
+    f = Flash(args.deck, args.xeric, args.priority, args.frequency)
 
     # list avialable flash decks
     if args.list:
