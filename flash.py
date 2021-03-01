@@ -10,6 +10,7 @@ import os
 import random
 import sys
 from pathlib import Path
+from copy import deepcopy
 
 from blessings import Terminal
 from ruamel.yaml import YAML
@@ -280,7 +281,9 @@ class Flash:
         """
         Update the priority of a card based on user input.
 
-        An invalid priority results in no change to the priority.
+        An invalid priority results in no change to the priority. This function also
+        updates the rotating list of high priority cards used for redisplaying high
+        priority cards throughout the run.
 
         Parameters
         ----------
@@ -289,6 +292,24 @@ class Flash:
         card : yaml object
             the card that is currently being updated
         """
+        priorities = ["1", "2", "3", "4"]
+
+        if newPri == "4" and card["priority"] != 3:
+            # add new high pri card (assume if the card is already a 3 it is in the list
+            # already so don't add again)
+            self.reshuffleCards.append(card)
+        else:
+            if (newPri == "4" or newPri not in priorities) and card["priority"] == 3:
+                # avoid removing if priority was unchanged
+                pass
+            else:
+                # remove card from high pri list
+                for idx, c in enumerate(self.reshuffleCards):
+                    if c["question"] == card["question"]:
+                        del self.reshuffleCards[idx]
+                        break
+
+        # update priority
         if newPri == "1":
             card["priority"] = 0
         elif newPri == "2":
@@ -314,27 +335,42 @@ class Flash:
 
         t = Terminal()
 
+        # number of cards shown for this run
+        self.cardCount = sum([len(c) for c in self.cardlist])
+
         numHighPri = 0
         if self.priority == -1 and self.frequency != 0:
-            numHighPri = len(self.cardsp3)
+            # number of high priority cards to show isn't the actual number of high
+            # priority or len of cardsp3 but more of a frequency of how many times the
+            # cards will be shown. It is a portion of the total card deck size.
+            numHighPri = int(self.cardCount / self.frequency)
 
-        # number of cards shown for this run
-        self.cardCount = sum([len(c) for c in self.cardlist]) + numHighPri
+        self.cardCount += numHighPri
+
+        # constantly updated list of high priority cards
+        self.reshuffleCards = deepcopy(self.cardsp3)
 
         cardsSeen = 0
+        countAdjust = False
         for prio in self.cardlist:
             random.shuffle(prio)
             for card in prio:
                 cardsSeen += 1
 
+                if not countAdjust and len(self.reshuffleCards) == 0:
+                    self.cardCount -= numHighPri
+                    countAdjust = True
+                elif countAdjust and len(self.reshuffleCards):
+                    self.cardCount += numHighPri
+                    countAdjust = False
+
                 # shuffle a random high priority card back in occasionally
                 if (
                     self.frequency != 0
-                    and numHighPri > 0
-                    and card["priority"] != 3
+                    and self.reshuffleCards
                     and cardsSeen % self.frequency == 0
                 ):
-                    highPriCard = random.choice(self.cardsp3)
+                    highPriCard = random.choice(self.reshuffleCards)
                     numHighPri -= 1
 
                     # show the card header and question
