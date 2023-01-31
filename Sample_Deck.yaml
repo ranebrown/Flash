@@ -1,0 +1,39 @@
+- subject: Geography
+  question: |
+    How many 14ers are in Colorado?
+  answer: |
+    58 peaks
+  priority: 2
+- subject: Programming
+  question: |
+    What is a recursive algorithm to obtain the Nth Fibonacci number?
+  answer: |
+    int fibbonacci(int n)
+    {
+      if(n == 0)
+         return 0;
+      else if(n == 1)
+         return 1;
+      else
+         return (fibbonacci(n-1) + fibbonacci(n-2));
+    }
+  priority: 1
+- subject: Math
+  question: |
+    2+2
+  answer: |
+    4
+  priority: 0
+- subject: Programming
+  question: |
+    What is FIFO?
+  answer: |
+    First In First Out.
+    It is a way of accessing, storing and retrieving data.
+  priority: 0
+- subject: Math
+  question: |
+    5+2
+  answer: |
+    7
+  priority: 0

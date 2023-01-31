@@ -1,5 +1,35 @@
 # Flash
 
+## Installation / Usage
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install blessings ruamel.yaml
+./flash.py -h
+```
+
+Decks can be stored in any location but if only the name is given then
+`XDG_DATA_HOME/flash` is searched.
+
+```bash
+# run a deck using relative or absolute path
+./flash.py -d ./Sample_Deck.yaml
+
+# create symlink to a deck in default deck location
+ln -s "$PWD/Sample_Deck.yaml" "$XDG_DATA_HOME/flash/Sample_Deck.yaml"
+
+# list available decks
+./flash.py -l
+Available Flash decks:
+  1. Sample_Deck
+
+# run a deck from the default location
+./flash.py -d Sample_Deck
+```
+
+## Overview
+
 Flash cards for the terminal. Original idea came from
 [Fla.sh](https://github.com/tallguyjenks/fla.sh). This version is written in
 python rather than bash and has a few improvements:
