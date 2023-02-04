@@ -9,8 +9,8 @@ import glob
 import os
 import random
 import sys
-from pathlib import Path
 from copy import deepcopy
+from pathlib import Path
 
 from blessings import Terminal
 from ruamel.yaml import YAML
@@ -431,7 +431,9 @@ if __name__ == "__main__":
 
         colorama.init()
 
-    parser = argparse.ArgumentParser(description="Flash cards for the terminal.")
+    parser = argparse.ArgumentParser(
+        description="Flash cards for the terminal. Press one of q, Q, ctrl-c, ctrl-d, ctrl-z to exit"
+    )
     parser.add_argument("-d", "--deck", help="The deck to use")
     parser.add_argument(
         "-p",
